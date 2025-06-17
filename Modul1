@@ -1,0 +1,47 @@
+-- Создание БД
+CREATE DATABASE ProductionDB;
+-- Заход в таблицу
+USE ProductionDB;
+-- Таблица типов материалов
+CREATE TABLE MaterialTypes (
+    MaterialTypeID INT PRIMARY KEY AUTO_INCREMENT,
+    TypeName VARCHAR(100) NOT NULL UNIQUE
+);
+
+-- Таблица материалов
+CREATE TABLE Materials (
+    MaterialID INT PRIMARY KEY AUTO_INCREMENT,
+    Name VARCHAR(255) NOT NULL,
+    MaterialTypeID INT,
+    Unit VARCHAR(50),
+    QuantityInStock DECIMAL(10,2) DEFAULT 0,
+    MinQuantity DECIMAL(10,2) DEFAULT 0,
+    QuantityPerPack DECIMAL(10,2),
+    PricePerUnit DECIMAL(10,2),
+    FOREIGN KEY (MaterialTypeID) REFERENCES MaterialTypes(MaterialTypeID)
+);
+
+-- Таблица поставщиков
+CREATE TABLE Suppliers (
+    SupplierID INT PRIMARY KEY AUTO_INCREMENT,
+    Name VARCHAR(255) NOT NULL,
+    Rating DECIMAL(5,2),
+    StartDate DATE
+);
+
+-- Таблица связи "материал - поставщик"
+CREATE TABLE MaterialSuppliers (
+    MaterialID INT,
+    SupplierID INT,
+    PRIMARY KEY (MaterialID, SupplierID),
+    FOREIGN KEY (MaterialID) REFERENCES Materials(MaterialID),
+    FOREIGN KEY (SupplierID) REFERENCES Suppliers(SupplierID)
+);
+
+-- Иморт csv
+LOAD DATA INFILE 'C:\Users\admin\Desktop\6\Вариант 1\Модуль 1\materials.csv'
+INTO TABLE Materials
+FIELDS TERMINATED BY ','
+ENCLOSED BY '"'
+LINES TERMINATED BY '\n'
+IGNORE 1 ROWS;
