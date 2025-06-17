@@ -1,0 +1,123 @@
+# Импорт необходимых библиотек
+import sys
+import math
+from PyQt5.QtWidgets import (
+    QApplication, QMainWindow, QTableView, QPushButton,
+    QVBoxLayout, QWidget, QLabel, QMessageBox
+)
+from PyQt5.QtSql import QSqlDatabase, QSqlTableModel
+
+
+def calculate_min_order(stock, min_quantity, pack_size, price_per_unit):
+    """
+    Функция рассчитывает стоимость минимально необходимой партии.
+    
+    Если количество на складе меньше минимального — вычисляет,
+    сколько нужно докупить упаковок и какова будет их стоимость.
+    
+    :param stock: текущее количество на складе
+    :param min_quantity: минимальное допустимое количество
+    :param pack_size: размер упаковки
+    :param price_per_unit: цена за единицу
+    :return: стоимость минимальной партии (округлённая до 2 знаков)
+    """
+    if stock >= min_quantity:
+        return 0.00  # Не нужно ничего заказывать
+
+    # Считаем, сколько не хватает
+    needed = min_quantity - stock
+
+    # Сколько целых упаковок нужно заказать (округление вверх)
+    packs_needed = math.ceil(needed / pack_size)
+
+    # Общее количество с учётом полных упаковок
+    total_units = packs_needed * pack_size
+
+    # Стоимость всей партии
+    total_cost = round(total_units * price_per_unit, 2)
+
+    return total_cost
+
+
+class MaterialWindow(QMainWindow):
+    """
+    Основное окно приложения.
+    Отображает список материалов и рассчитывает стоимость закупки.
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Учет материалов")  # Название окна
+        self.setGeometry(100, 100, 800, 600)     # Размеры окна
+
+        self.init_ui()      # Создание интерфейса
+        self.load_data()    # Загрузка данных из БД
+
+    def init_ui(self):
+        """
+        Создание элементов пользовательского интерфейса.
+        """
+        layout = QVBoxLayout()
+
+        # Таблица для отображения материалов
+        self.table_view = QTableView()
+        layout.addWidget(self.table_view)
+
+        # Заголовок и текст для вывода общей стоимости
+        self.cost_label = QLabel("Стоимость минимальной партии:")
+        self.cost_value = QLabel("")
+
+        layout.addWidget(self.cost_label)
+        layout.addWidget(self.cost_value)
+
+        # Установка контейнера с макетом как центральный виджет
+        container = QWidget()
+        container.setLayout(layout)
+        self.setCentralWidget(container)
+
+    def load_data(self):
+        """
+        Подключение к базе данных и загрузка таблицы Materials.
+        Также рассчитывается общая стоимость всех необходимых закупок.
+        """
+        # Настройка подключения к базе данных SQLite
+        conn = QSqlDatabase.addDatabase('QSQLITE')
+        conn.setDatabaseName('database.db')  # Путь к файлу БД
+
+        if not conn.open():
+            # Сообщение об ошибке, если подключение не удалось
+            QMessageBox.critical(self, "Ошибка", "Не удалось подключиться к БД.")
+            return
+
+        # Создание модели данных для таблицы "Materials"
+        model = QSqlTableModel(db=conn)
+        model.setTable("Materials")
+        model.select()
+
+        # Привязка модели к таблице в интерфейсе
+        self.table_view.setModel(model)
+
+        # Расчет стоимости минимальной партии
+        total_cost = 0.00
+
+        for row in range(model.rowCount()):
+            # Получаем данные из таблицы
+            stock = model.data(model.index(row, 3))   # QuantityInStock
+            min_qty = model.data(model.index(row, 4)) # MinQuantity
+            pack = model.data(model.index(row, 5))    # QuantityPerPack
+            price = model.data(model.index(row, 6))   # PricePerUnit
+
+            # Рассчитываем стоимость
+            cost = calculate_min_order(stock, min_qty, pack, price)
+            total_cost += cost  # Добавляем к общей сумме
+
+        # Отображаем результат
+        self.cost_value.setText(f"{total_cost:.2f} руб.")
+
+
+if __name__ == '__main__':
+    # Запуск приложения
+    app = QApplication(sys.argv)
+    window = MaterialWindow()
+    window.show()
+    sys.exit(app.exec_())
