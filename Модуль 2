@@ -73,7 +73,7 @@ class MaterialWindow(QMainWindow):
         """
         # Настройка подключения к базе данных SQLite
         conn = QSqlDatabase.addDatabase('QSQLITE')
-        conn.setDatabaseName('database.db')  # Путь к файлу БД
+        conn.setDatabaseName('productiondb_materials.sql')  # Путь к файлу БД
 
         if not conn.open():
             # Сообщение об ошибке, если подключение не удалось
